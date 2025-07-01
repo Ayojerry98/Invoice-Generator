@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Pacifico&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-color: #4f46e5;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .controls-section {
+            /* This class is used to hide controls during printing */
+        }
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, .15);
+            font-size: 16px;
+            line-height: 24px;
+            color: #555;
+            transition: all 0.3s ease;
+        }
+        .invoice-box table {
+            width: 100%;
+            line-height: inherit;
+            text-align: left;
+        }
+        .invoice-box table td {
+            padding: 5px;
+            vertical-align: top;
+        }
+        .invoice-box table tr td:nth-child(n+2) {
+            text-align: right;
+        }
+        .invoice-box table tr.top table td {
+            padding-bottom: 20px;
+        }
+        .invoice-box table tr.top table td.title {
+            font-size: 45px;
+            line-height: 45px;
+            color: #333;
+        }
+        .invoice-box table tr.information table td {
+            padding-bottom: 40px;
+        }
+        .invoice-box table tr.heading td {
+            background: #eee;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+        }
+        .invoice-box table tr.item td{
+            border-bottom: 1px solid #eee;
+        }
+        .invoice-box table tr.total td:nth-child(4) {
+            border-top: 2px solid #eee;
+            font-weight: bold;
+        }
+        .brand-color-picker {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 40px;
+            height: 40px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        .brand-color-picker::-webkit-color-swatch {
+            border-radius: 50%;
+            border: 2px solid #cacaca;
+        }
+        .brand-color-picker::-moz-color-swatch {
+            border-radius: 50%;
+            border: 2px solid #cacaca;
+        }
+        .template-thumbnail {
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: border-color 0.3s;
+            border-radius: 8px;
+        }
+        .template-thumbnail.active {
+            border-color: var(--brand-color);
+        }
+
+        /* --- Template Specific Styles --- */
+
+        /* Default/Classic uses brand color */
+        #invoice-title {
+            color: var(--brand-color);
+        }
+        .invoice-box table tr.heading td {
+            background-color: var(--brand-color)33; /* 33 adds alpha for transparency */
+        }
+
+        /* Modern Template */
+        .modern-template {
+            border: none;
+        }
+        .modern-template table tr.heading td {
+            background: var(--brand-color);
+            color: white;
+            border: none;
+        }
+
+        /* Elegant Template */
+        .elegant-template { font-family: 'Lora', serif; }
+        .elegant-template #invoice-title { font-family: 'Lora', serif; }
+        .elegant-template table tr.heading td {
+            border: none;
+            font-weight: normal;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 14px;
+        }
+
+        /* Creative Template */
+        .creative-template {
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            border: none;
+        }
+        .creative-template #invoice-title { font-family: 'Pacifico', cursive; font-size: 50px; }
+        .creative-template table tr.heading td { border-radius: 5px 5px 0 0; }
+
+        /* Minimalist Template */
+        .minimalist-template { box-shadow: none; border: 1px solid #e2e8f0; }
+        .minimalist-template #invoice-title { color: #1e293b !important; font-size: 28px; }
+        .minimalist-template table tr.heading td {
+            background: none !important;
+            color: #64748b;
+            border-bottom: 2px solid #e2e8f0;
+            border-top: 2px solid #e2e8f0;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+        .minimalist-template table tr.total td:nth-child(4) { border-top: 2px solid #e2e8f0; }
+
+        /* --- Print Styles --- */
+        @media print {
+            body { background-color: white; }
+            .controls-section, #add-item-btn-container { display: none !important; }
+            .invoice-box {
+                box-shadow: none;
+                border: none;
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 sm:p-6 lg:p-8">
+
+    <div class="max-w-4xl mx-auto mb-8 controls-section">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Invoice Generator</h1>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8 flex flex-wrap items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <label class="font-semibold text-gray-700">Template:</label>
+                <div class="flex gap-3 flex-wrap">
+                    <img id="template1" src="https://placehold.co/100x141/d1d5db/374151?text=Classic" alt="Classic Template" class="w-16 h-24 object-cover template-thumbnail active" onclick="changeTemplate('classic')">
+                    <img id="template2" src="https://placehold.co/100x141/a5b4fc/1e1b4b?text=Modern" alt="Modern Template" class="w-16 h-24 object-cover template-thumbnail" onclick="changeTemplate('modern')">
+                    <img id="template3" src="https://placehold.co/100x141/f3e8ff/8b5cf6?text=Elegant" alt="Elegant Template" class="w-16 h-24 object-cover template-thumbnail" onclick="changeTemplate('elegant')">
+                    <img id="template4" src="https://placehold.co/100x141/dcfce7/16a34a?text=Creative" alt="Creative Template" class="w-16 h-24 object-cover template-thumbnail" onclick="changeTemplate('creative')">
+                    <img id="template5" src="https://placehold.co/100x141/f1f5f9/475569?text=Minimal" alt="Minimalist Template" class="w-16 h-24 object-cover template-thumbnail" onclick="changeTemplate('minimalist')">
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <label for="brand-color" class="font-semibold text-gray-700">Brand Color:</label>
+                <input type="color" id="brand-color" value="#4f46e5" class="brand-color-picker">
+            </div>
+
+            <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow transition">
+                Print / Download PDF
+            </button>
+        </div>
+    </div>
+
+    <div id="invoice-container" class="invoice-box bg-white">
+        <table>
+            <tr class="top">
+                <td colspan="4">
+                    <table>
+                        <tr>
+                            <td class="title">
+                                <img id="logo-preview" src="https://placehold.co/150x50/cccccc/ffffff?text=Your+Logo" alt="Company logo" style="max-width:150px; max-height:50px; cursor:pointer;">
+                                <input type="file" id="logo-upload" class="hidden" accept="image/*">
+                            </td>
+                            
+                            <td id="invoice-title" class="text-right text-3xl font-bold uppercase">
+                                INVOICE
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            
+            <tr class="information">
+                <td colspan="4">
+                    <table>
+                        <tr>
+                            <td>
+                                <div contenteditable="true" class="font-semibold">Customer Details:</div>
+                                <div contenteditable="true" id="customer-name">John Doe</div>
+                                <div contenteditable="true" id="customer-phone">(123) 456-7890</div>
+                            </td>
+                            
+                            <td class="text-right">
+                                <div><strong>Invoice #:</strong> <span id="invoice-no" contenteditable="true">N1</span></div>
+                                <div><strong>Date:</strong> <span id="invoice-date" contenteditable="true">July 1, 2025</span></div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            
+            <tr class="heading">
+                <td class="font-semibold">Item</td>
+                <td class="font-semibold text-right">Quantity</td>
+                <td class="font-semibold text-right">Price</td>
+                <td class="font-semibold text-right">Total</td>
+            </tr>
+            
+            <tbody id="invoice-items">
+                <tr class="item">
+                    <td contenteditable="true">Website Design</td>
+                    <td><input type="number" value="1" class="w-16 text-right quantity p-1 rounded border bg-gray-50"></td>
+                    <td><input type="number" value="3000" class="w-24 text-right price p-1 rounded border bg-gray-50"></td>
+                    <td class="total-item text-right">3000.00</td>
+                </tr>
+                 <tr class="item">
+                    <td contenteditable="true">Hosting (1 year)</td>
+                    <td><input type="number" value="1" class="w-16 text-right quantity p-1 rounded border bg-gray-50"></td>
+                    <td><input type="number" value="300" class="w-24 text-right price p-1 rounded border bg-gray-50"></td>
+                    <td class="total-item text-right">300.00</td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="add-item-btn-container" class="text-center mt-4">
+             <button id="add-item" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow transition text-sm">
+                + Add Item
+            </button>
+        </div>
+       
+        <table class="mt-6 w-full">
+             <tr class="total">
+                <td colspan="3" class="text-right font-bold">Subtotal:</td>
+                <td id="subtotal" class="text-right font-bold w-32">3300.00</td>
+            </tr>
+        </table>
+
+        <div class="mt-8">
+            <div class="font-bold">Amount in words:</div>
+            <div id="amount-in-words" class="text-gray-700 italic">Three Thousand Three Hundred</div>
+        </div>
+
+        <div class="mt-8">
+            <div class="font-bold">Notes:</div>
+            <div id="notes" contenteditable="true" class="text-gray-600 mt-2 border-t pt-2">
+                Thank you for your business. Please contact us for any questions.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const itemsTable = document.getElementById('invoice-items');
+            const addItemBtn = document.getElementById('add-item');
+            const logoPreview = document.getElementById('logo-preview');
+            const logoUpload = document.getElementById('logo-upload');
+            const brandColorInput = document.getElementById('brand-color');
+
+            // --- Core Functions ---
+            function calculateTotal() {
+                let subtotal = 0;
+                itemsTable.querySelectorAll('tr.item').forEach(row => {
+                    const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+                    const price = parseFloat(row.querySelector('.price').value) || 0;
+                    const total = quantity * price;
+                    row.querySelector('.total-item').textContent = total.toFixed(2);
+                    subtotal += total;
+                });
+                document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+                document.getElementById('amount-in-words').textContent = numberToWords(subtotal);
+            }
+
+            function numberToWords(num) {
+                const a = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+                const b = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+                const numStr = num.toString();
+                if (num === 0) return 'Zero';
+                if (numStr.length > 9) return 'overflow';
+                const [, n1, n2, n3, n4, n5] = ('000000000' + numStr).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+                let str = '';
+                str += n1 != 0 ? (a[Number(n1)] || b[n1[0]] + ' ' + a[n1[1]]) + ' crore ' : '';
+                str += n2 != 0 ? (a[Number(n2)] || b[n2[0]] + ' ' + a[n2[1]]) + ' lakh ' : '';
+                str += n3 != 0 ? (a[Number(n3)] || b[n3[0]] + ' ' + a[n3[1]]) + ' thousand ' : '';
+                str += n4 != 0 ? (a[Number(n4)] || b[n4[0]] + ' ' + a[n4[1]]) + ' hundred ' : '';
+                str += n5 != 0 ? ((str != '' ? 'and ' : '') + (a[Number(n5)] || b[n5[0]] + ' ' + a[n5[1]])) : '';
+                return str.split(' ').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ').trim();
+            }
+            
+            function addNewItem() {
+                const newRow = document.createElement('tr');
+                newRow.classList.add('item');
+                newRow.innerHTML = `
+                    <td contenteditable="true">New Item</td>
+                    <td><input type="number" value="1" class="w-16 text-right quantity p-1 rounded border bg-gray-50"></td>
+                    <td><input type="number" value="0" class="w-24 text-right price p-1 rounded border bg-gray-50"></td>
+                    <td class="total-item text-right">0.00</td>
+                `;
+                itemsTable.appendChild(newRow);
+                attachRowListeners(newRow);
+                calculateTotal();
+            }
+
+            function attachRowListeners(row) {
+                 row.querySelectorAll('.quantity, .price').forEach(input => {
+                    input.addEventListener('input', calculateTotal);
+                });
+            }
+
+            function applyBrandColor(color) {
+                document.documentElement.style.setProperty('--brand-color', color);
+            }
+
+            // --- Event Listeners ---
+            itemsTable.querySelectorAll('tr.item').forEach(attachRowListeners);
+            addItemBtn.addEventListener('click', addNewItem);
+            
+            logoPreview.addEventListener('click', () => logoUpload.click());
+            logoUpload.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        logoPreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            brandColorInput.addEventListener('input', (event) => {
+                applyBrandColor(event.target.value);
+            });
+
+            // --- Initial Setup ---
+            document.getElementById('invoice-date').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            applyBrandColor(brandColorInput.value);
+            calculateTotal();
+        });
+
+        // --- Global Functions ---
+        function changeTemplate(templateName) {
+            const container = document.getElementById('invoice-container');
+            const thumbnails = document.querySelectorAll('.template-thumbnail');
+            
+            const templateClasses = ['modern-template', 'elegant-template', 'creative-template', 'minimalist-template'];
+            container.classList.remove(...templateClasses);
+            
+            thumbnails.forEach(t => t.classList.remove('active'));
+
+            switch(templateName) {
+                case 'classic':
+                    document.getElementById('template1').classList.add('active');
+                    break;
+                case 'modern':
+                    container.classList.add('modern-template');
+                    document.getElementById('template2').classList.add('active');
+                    break;
+                case 'elegant':
+                    container.classList.add('elegant-template');
+                    document.getElementById('template3').classList.add('active');
+                    break;
+                case 'creative':
+                    container.classList.add('creative-template');
+                    document.getElementById('template4').classList.add('active');
+                    break;
+                case 'minimalist':
+                    container.classList.add('minimalist-template');
+                    document.getElementById('template5').classList.add('active');
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
